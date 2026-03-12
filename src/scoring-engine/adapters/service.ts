@@ -1,11 +1,16 @@
 import { Game, GameId, PlayerId, Result, success, failure, Scoreboard } from '../../shared/types';
 import { ScoringEngineDrivingPort, GameStorageDrivenPort } from '../ports/ports';
 import { calculateFrames } from '../domain/scoring';
+import { Tracer } from '../../shared/tracer';
 
 export class ScoringEngineService implements ScoringEngineDrivingPort {
-  constructor(private storage: GameStorageDrivenPort) {}
+  constructor(
+    private storage: GameStorageDrivenPort,
+    private tracer?: Tracer
+  ) {}
 
   async startGame(laneId: string, playerIds: PlayerId[]): Promise<Result<Game>> {
+    this.tracer?.trace({ hexagon: 'scoring-engine', layer: 'port', action: 'startGame', input: { laneId, playerIds } });
     const game: Game = {
       id: `g-${Date.now()}`,
       laneId,
@@ -16,19 +21,69 @@ export class ScoringEngineService implements ScoringEngineDrivingPort {
     playerIds.forEach(pid => rolls.set(pid, []));
     
     await this.storage.save(game, rolls);
-    return success(game);
+    const res = success(game);
+    this.tracer?.trace({ hexagon: 'scoring-engine', layer: 'port', action: 'startGame.output', output: res });
+    return res;
   }
 
   async recordRoll(gameId: GameId, playerId: PlayerId, pins: number): Promise<Result<void>> {
+    this.tracer?.trace({ hexagon: 'scoring-engine', layer: 'port', action: 'recordRoll', input: { gameId, playerId, pins } });
+    
+    // Validation Rule
+    if (pins < 0 || pins > 10) {
+      const err = failure(new Error('Roll pins must be 0-10'));
+      this.tracer?.trace({ hexagon: 'scoring-engine', layer: 'domain', action: 'VALIDATION RULE [TRIGGERED]', input: { pins }, output: 'Roll pins must be 0-10' });
+      return err;
+    }
+
     const data = await this.storage.findById(gameId);
     if (!data) return failure(new Error('Game not found'));
     
     const playerRolls = data.rolls.get(playerId);
     if (!playerRolls) return failure(new Error('Player not in game'));
     
+    // More Validation
+    const frames = calculateFrames(playerRolls);
+    const currentFrame = frames.length === 0 ? null : frames[frames.length - 1];
+    
+    if (frames.length < 10) {
+      // Frames 1-9
+      if (currentFrame && !currentFrame.isComplete && currentFrame.rolls.length === 1) {
+        const firstRoll = currentFrame.rolls[0];
+        if (pins > (10 - firstRoll)) {
+          const msg = `Rejected: pins=${pins} exceeds remaining pins (${10 - firstRoll}). Frame ${frames.length}, Roll 2: First roll was ${firstRoll}, max allowed is ${10 - firstRoll}`;
+          this.tracer?.trace({ hexagon: 'scoring-engine', layer: 'domain', action: 'VALIDATION RULE [TRIGGERED]', output: msg });
+          return failure(new Error(msg));
+        }
+      }
+    } else {
+      // Frame 10
+      const f10 = frames[9];
+      if (!f10.isComplete) {
+        if (f10.rolls.length === 1) {
+          const roll1 = f10.rolls[0];
+          if (roll1 < 10 && pins > (10 - roll1)) {
+            const msg = `Rejected: pins=${pins} exceeds remaining pins (${10 - roll1}). Frame 10, Roll 2: First roll was ${roll1}, max allowed is ${10 - roll1}`;
+            this.tracer?.trace({ hexagon: 'scoring-engine', layer: 'domain', action: 'VALIDATION RULE [TRIGGERED]', output: msg });
+            return failure(new Error(msg));
+          }
+        } else if (f10.rolls.length === 2) {
+          const roll1 = f10.rolls[0];
+          const roll2 = f10.rolls[1];
+          if (roll1 === 10 && roll2 < 10 && pins > (10 - roll2)) {
+            const msg = `Rejected: pins=${pins} exceeds remaining pins (${10 - roll2}). Frame 10, Roll 3: After strike, second roll was ${roll2}, max allowed is ${10 - roll2}`;
+            this.tracer?.trace({ hexagon: 'scoring-engine', layer: 'domain', action: 'VALIDATION RULE [TRIGGERED]', output: msg });
+            return failure(new Error(msg));
+          }
+        }
+      } else {
+        return failure(new Error('Game already complete for this player'));
+      }
+    }
+
     playerRolls.push(pins);
     
-    const frames = calculateFrames(playerRolls);
+    const updatedFrames = calculateFrames(playerRolls);
     const gameIsComplete = data.game.playerIds.every(pid => {
       const pRolls = pid === playerId ? playerRolls : data.rolls.get(pid) || [];
       const pFrames = calculateFrames(pRolls);
