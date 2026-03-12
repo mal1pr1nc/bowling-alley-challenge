@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hexagonal Bowling Alley Challenge</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    
+    <!-- Primary Meta Tags -->
+    <meta name="title" content="Hexagonal Bowling Alley Challenge">
+    <meta name="description" content="A 4-app hexagonal system demonstrating clean architecture, pure domain logic, and zero cross-hexagon imports. Build inspired by Alistair Cockburn.">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://bowling-challenge.hivemind.rs/">
+    <meta property="og:title" content="Hexagonal Bowling Alley Challenge">
+    <meta property="og:description" content="A 4-app hexagonal system demonstrating clean architecture, pure domain logic, and zero cross-hexagon imports. Build inspired by Alistair Cockburn.">
+    <meta property="og:image" content="https://bowling-challenge.hivemind.rs/social-preview.jpg">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://bowling-challenge.hivemind.rs/">
+    <meta property="twitter:title" content="Hexagonal Bowling Alley Challenge">
+    <meta property="twitter:description" content="A 4-app hexagonal system demonstrating clean architecture, pure domain logic, and zero cross-hexagon imports. Build inspired by Alistair Cockburn.">
+    <meta property="twitter:image" content="https://bowling-challenge.hivemind.rs/social-preview.jpg">
+
+    <style>
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            background-color: #0a0e17;
+            color: #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            max-width: 800px;
+            background: #111827;
+            padding: 40px;
+            border-radius: 12px;
+            border: 1px solid #1e293b;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        h1 {
+            color: #f97316;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #94a3b8;
+            line-height: 1.6;
+            font-size: 1.1rem;
+        }
+        .api-badge {
+            background: #1e293b;
+            color: #3b82f6;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            border: 1px solid #3b82f6;
+            display: inline-block;
+            margin-top: 20px;
+        }
+        .endpoints {
+            text-align: left;
+            margin-top: 30px;
+            background: #0f172a;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #f97316;
+        }
+        code {
+            color: #fb923c;
+        }
+        .footer {
+            margin-top: 40px;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+        a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎳 Bowling Alley</h1>
+        <p>The Hexagonal Challenge by Alistair Cockburn & J.B. Rainsberger</p>
+        <div class="api-badge">API ACTIVE</div>
+        
+        <p style="margin-top: 30px;">
+            This system proves that AI can handle complex multi-app hexagonal architectures with zero interventions. 
+            Built using 4 isolated hexagons connected via bridge adapters.
+        </p>
+
+        <div class="endpoints">
+            <strong>Endpoints:</strong>
+            <ul>
+                <li><code>POST /games</code> - Book a new game</li>
+                <li><code>POST /games/:id/rolls</code> - Record a roll</li>
+                <li><code>GET /games/:id/scoreboard</code> - View the current score</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            Built by the Algorithmic Sink for <a href="https://hivemind.rs">Hivemind OS</a>.
+            <br>
+            View source on <a href="https://github.com/mal1pr1nc/bowling-alley-challenge">GitHub</a>.
+        </div>
+    </div>
+</body>
+</html>

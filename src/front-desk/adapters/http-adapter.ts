@@ -6,12 +6,13 @@ export class FrontDeskHttpAdapter {
 
   constructor(private service: FrontDeskDrivingPort) {
     this.app.use(express.json());
+    this.app.use(express.static('public'));
     this.setupRoutes();
   }
 
   private setupRoutes() {
-    // Root / (Welcome/Status)
-    this.app.get('/', (req: Request, res: Response) => {
+    // API Status (moved from root)
+    this.app.get('/api/status', (req: Request, res: Response) => {
       res.json({ 
         message: 'Bowling Alley Hexagonal API is running',
         endpoints: [
