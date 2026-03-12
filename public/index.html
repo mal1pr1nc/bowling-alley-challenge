@@ -412,6 +412,7 @@
     let currentGame = null;
     let currentPlayerIndex = 0;
     let selectedPins = 0;
+    let playerNameMap = {};
 
     // Load initial data
     window.onload = async () => {
@@ -530,6 +531,10 @@ ${uc.businessRules ? `Business Rules Designed by AI:\n${uc.businessRules.map(r =
         if (data.value) {
             currentGame = data.value;
             currentPlayerIndex = 0;
+            playerNameMap = {};
+            currentGame.playerIds.forEach((pid, i) => {
+                playerNameMap[pid] = names[i];
+            });
             document.getElementById('play-controls').style.display = 'flex';
             processTrace(data.trace);
             refreshScoreboard();
@@ -582,23 +587,51 @@ ${uc.businessRules ? `Business Rules Designed by AI:\n${uc.businessRules.map(r =
             
             let framesHtml = '';
             for (let i = 0; i < 10; i++) {
-                const f = ps.frames[i] || { rolls: [], score: '' };
-                const r1 = f.rolls[0] !== undefined ? (f.rolls[0] === 10 ? '<span class="strike">X</span>' : f.rolls[0]) : '&nbsp;';
-                
-                let r2 = '&nbsp;';
-                if (f.rolls[1] !== undefined) {
-                    if (f.rolls[0] + f.rolls[1] === 10 && f.rolls[0] !== 10) r2 = '<span class="spare">/</span>';
-                    else if (f.rolls[1] === 10) r2 = '<span class="strike">X</span>';
-                    else r2 = f.rolls[1];
-                }
+                const f = ps.frames[i] || { rolls: [], score: '', runningTotal: 0 };
+                let r1, r2, r3 = '';
 
-                let r3 = '';
-                if (i === 9) {
+                if (i < 9) {
+                    // Frames 1-9: strike X in second slot (top-right), first slot empty
+                    if (f.rolls[0] === 10) {
+                        r1 = '&nbsp;';
+                        r2 = '<span class="strike">X</span>';
+                    } else {
+                        r1 = f.rolls[0] !== undefined ? f.rolls[0] : '&nbsp;';
+                        if (f.rolls[1] !== undefined) {
+                            r2 = (f.rolls[0] + f.rolls[1] === 10) ? '<span class="spare">/</span>' : f.rolls[1];
+                        } else {
+                            r2 = '&nbsp;';
+                        }
+                    }
+                } else {
+                    // Frame 10: all three slots visible
+                    r1 = f.rolls[0] !== undefined ? (f.rolls[0] === 10 ? '<span class="strike">X</span>' : f.rolls[0]) : '&nbsp;';
+
+                    r2 = '&nbsp;';
+                    if (f.rolls[1] !== undefined) {
+                        if (f.rolls[0] === 10) {
+                            // After strike, pins reset
+                            r2 = f.rolls[1] === 10 ? '<span class="strike">X</span>' : f.rolls[1];
+                        } else if (f.rolls[0] + f.rolls[1] === 10) {
+                            r2 = '<span class="spare">/</span>';
+                        } else {
+                            r2 = f.rolls[1];
+                        }
+                    }
+
                     let r3v = '&nbsp;';
                     if (f.rolls[2] !== undefined) {
-                        if (f.rolls[2] === 10) r3v = '<span class="strike">X</span>';
-                        else if (f.rolls[1] + f.rolls[2] === 10 && f.rolls[1] !== 10) r3v = '<span class="spare">/</span>';
-                        else r3v = f.rolls[2];
+                        if (f.rolls[2] === 10) {
+                            r3v = '<span class="strike">X</span>';
+                        } else if (f.rolls[0] === 10 && f.rolls[1] !== 10 && f.rolls[1] + f.rolls[2] === 10) {
+                            // Spare: roll1 was strike, roll2 wasn't, roll2+roll3=10
+                            r3v = '<span class="spare">/</span>';
+                        } else if (f.rolls[1] === 10 && f.rolls[2] + f.rolls[2] !== 10) {
+                            // After double strike, roll 3 is fresh
+                            r3v = f.rolls[2];
+                        } else {
+                            r3v = f.rolls[2];
+                        }
                     }
                     r3 = `<div class="roll-slot">${r3v}</div>`;
                 }
@@ -610,12 +643,12 @@ ${uc.businessRules ? `Business Rules Designed by AI:\n${uc.businessRules.map(r =
                             <div class="roll-slot">${r2}</div>
                             ${r3}
                         </div>
-                        <div class="total-slot">${f.score || '-'}</div>
+                        <div class="total-slot">${f.runningTotal || '-'}</div>
                     </td>
                 `;
             }
 
-            const pName = escapeHtml(ps.playerId.split('-')[0]);
+            const pName = escapeHtml(playerNameMap[ps.playerId] || ps.playerId);
             row.innerHTML = `
                 <div style="font-family: 'JetBrains Mono'; font-size: 0.7rem; color: ${idx === currentPlayerIndex ? 'var(--primary)' : 'var(--muted)'}; margin-bottom: 4px;">
                     ${idx === currentPlayerIndex ? '&#9654; ' : '&nbsp; '}${pName.toUpperCase()}
@@ -628,11 +661,8 @@ ${uc.businessRules ? `Business Rules Designed by AI:\n${uc.businessRules.map(r =
             container.appendChild(row);
         });
 
-        document.getElementById('active-player-label').innerText = `PLAYER: ${scoreboard.playerScores[currentPlayerIndex].playerId.split('-')[0].toUpperCase()}`;
+        document.getElementById('active-player-label').innerText = `PLAYER: ${(playerNameMap[scoreboard.playerScores[currentPlayerIndex].playerId] || scoreboard.playerScores[currentPlayerIndex].playerId).toUpperCase()}`;
         
-        // Update Game Status
-        const statusRes = await fetch(`/api/status`); // Not enough, we need game info
-        // We'll just infer from current game
         updateHexagonStates();
     }
 
@@ -691,11 +721,55 @@ ${uc.businessRules ? `Business Rules Designed by AI:\n${uc.businessRules.map(r =
         return div.innerHTML;
     }
 
-    function updateHexagonStates() {
-        document.getElementById('state-player-registry').textContent = `Registered: ${currentGame.playerIds.length} players`;
-        document.getElementById('state-lane-manager').innerHTML = `Current Lane: ${escapeHtml(currentGame.laneId)}<br>Status: IN-USE`;
-        document.getElementById('state-scoring-engine').innerHTML = `Game ID: ${escapeHtml(currentGame.id)}<br>Logic: VERIFIED`;
-        document.getElementById('state-front-desk').innerHTML = `Orchestrator: ACTIVE<br>Bridge: CONNECTED`;
+    async function updateHexagonStates() {
+        // Player Registry: show player names + IDs
+        const playerLines = currentGame.playerIds.map(pid => {
+            const name = playerNameMap[pid] || pid;
+            return `${escapeHtml(name)} [${escapeHtml(pid.substring(0, 10))}...]`;
+        }).join('<br>');
+        document.getElementById('state-player-registry').innerHTML = `Registered: ${currentGame.playerIds.length} players<br>${playerLines}`;
+
+        // Lane Manager: show all 10 lanes with status
+        try {
+            const statusRes = await fetch('/api/status');
+            const statusData = await statusRes.json();
+            // Fetch lane list if available, otherwise show current lane
+            const lanesRes = await fetch(`/games/${currentGame.id}/scoreboard`);
+            const sb = await lanesRes.json();
+            // Build lane display from known state
+            let laneHtml = '';
+            for (let l = 1; l <= 10; l++) {
+                const lid = `lane-${l}`;
+                let status = 'AVAIL';
+                let dot = '<span style="color: var(--terminal);">&#9679;</span>';
+                if (lid === currentGame.laneId) {
+                    status = 'IN-USE';
+                    dot = '<span style="color: var(--primary);">&#9679;</span>';
+                }
+                laneHtml += `${dot} ${lid}: ${status}  `;
+                if (l === 5) laneHtml += '<br>';
+            }
+            document.getElementById('state-lane-manager').innerHTML = laneHtml;
+        } catch {
+            document.getElementById('state-lane-manager').innerHTML = `Current Lane: ${escapeHtml(currentGame.laneId)}<br>Status: IN-USE`;
+        }
+
+        // Scoring Engine: show current frame per player
+        try {
+            const sbRes = await fetch(`/games/${currentGame.id}/scoreboard`);
+            const sb = await sbRes.json();
+            const scoreLines = sb.playerScores.map(ps => {
+                const name = playerNameMap[ps.playerId] || ps.playerId;
+                const frameNum = ps.frames.length || 0;
+                return `${escapeHtml(name)}: Frame ${frameNum}/10, Score: ${ps.totalScore}`;
+            }).join('<br>');
+            document.getElementById('state-scoring-engine').innerHTML = `Game: ${escapeHtml(currentGame.id.substring(0, 10))}...<br>${scoreLines}`;
+        } catch {
+            document.getElementById('state-scoring-engine').innerHTML = `Game ID: ${escapeHtml(currentGame.id)}<br>Logic: VERIFIED`;
+        }
+
+        // Front Desk: show game ID and orchestration state
+        document.getElementById('state-front-desk').innerHTML = `Orchestrator: ACTIVE<br>Game: ${escapeHtml(currentGame.id.substring(0, 10))}...<br>Lane: ${escapeHtml(currentGame.laneId)}<br>Players: ${currentGame.playerIds.length}`;
     }
 </script>
 

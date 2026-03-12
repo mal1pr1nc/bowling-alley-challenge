@@ -56,7 +56,7 @@ export class ScoringEngineService implements ScoringEngineDrivingPort {
     
     if (frames.length < 10) {
       // Frames 1-9
-      if (currentFrame && !currentFrame.isComplete && currentFrame.rolls.length === 1) {
+      if (currentFrame && !currentFrame.isComplete && currentFrame.rolls.length === 1 && currentFrame.rolls[0] !== 10) {
         const firstRoll = currentFrame.rolls[0];
         if (pins > (10 - firstRoll)) {
           const msg = `Rejected: pins=${pins} exceeds remaining pins (${10 - firstRoll}). Frame ${frames.length}, Roll 2: First roll was ${firstRoll}, max allowed is ${10 - firstRoll}`;
@@ -147,7 +147,7 @@ export class ScoringEngineService implements ScoringEngineDrivingPort {
       return {
         playerId: pid,
         totalScore,
-        frames: frames.map(f => ({ rolls: f.rolls, score: f.score }))
+        frames: frames.map(f => ({ rolls: f.rolls, score: f.score, runningTotal: f.runningTotal }))
       };
     });
 

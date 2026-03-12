@@ -30,6 +30,6 @@ export interface Scoreboard {
   playerScores: {
     playerId: string;
     totalScore: number;
-    frames: { rolls: number[]; score: number }[];
+    frames: { rolls: number[]; score: number; runningTotal: number }[];
   }[];
 }

@@ -2,8 +2,11 @@
   "name": "bowling_alley_challenge",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/main.js",
   "scripts": {
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "dev": "ts-node src/main.ts",
     "test": "vitest run"
   },
   "keywords": [],
