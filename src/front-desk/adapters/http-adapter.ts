@@ -8,7 +8,7 @@ export class FrontDeskHttpAdapter {
 
   constructor(private service: FrontDeskDrivingPort, private tracer: Tracer) {
     this.app.use(express.json());
-    this.app.use(express.static(path.join(__dirname, '../../public')));
+    this.app.use(express.static(path.join(__dirname, '../../../public')));
     this.setupRoutes();
   }
 
