@@ -49,3 +49,22 @@ All domain logic (e.g., `scoring.ts`) is implemented as pure functions or depend
 | **Single Composition Root** | If `main.ts` becomes too complex, wiring 4+ hexagons will be hard to maintain. | Monitor `main.ts` size as we add HTTP and more features. |
 | **No Persistence Bridge** | Shared types (IDs) are strings. If we move to GUIDs or DB-specific IDs, will it break the bridge? | Verify that `shared/types.ts` is sufficient for cross-hexagon identity. |
 | **Synchronous Bridges** | Current bridges are `async` but the underlying implementation is in-memory. Will latency/failure handling in real microservices break the Front Desk? | Stress test with simulated latency in a mock bridge. |
+ 
+
+# ADR 004: Scoreboard Type Moved to Shared Types
+
+## Status: Accepted
+
+## Context
+
+Audit found that front-desk/ports/ports.ts imported Scoreboard directly from scoring-engine/ports/ports.ts, violating the zero cross-hexagon import rule.
+
+## Decision
+
+Moved Scoreboard to shared/types.ts. All hexagons now reference it from the shared boundary.
+
+## Consequences
+
+- Pros: Restores true hexagonal isolation. Front Desk no longer has a compile-time dependency on Scoring Engine internals.
+
+- Cons: shared/types.ts grows slightly. Acceptable for cross-cutting data contracts.
