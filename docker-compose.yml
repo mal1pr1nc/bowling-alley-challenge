@@ -1,0 +1,8 @@
+version: "3.8"
+
+services:
+  bowling:
+    build: .
+    ports:
+      - "3150:3001"
+    restart: unless-stopped
