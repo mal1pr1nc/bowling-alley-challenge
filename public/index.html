@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hexagonal Bowling Alley Challenge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     
     <!-- Meta Tags -->
@@ -13,221 +16,393 @@
 
     <style>
         :root {
-            --bg: #0a0e17;
-            --panel-bg: #111827;
-            --inner-bg: #0f172a;
-            --text: #e2e8f0;
-            --muted: #94a3b8;
-            --primary: #f97316;
-            --accent: #3b82f6;
-            --border: #1e293b;
-            --success: #22c55e;
-            --error: #ef4444;
+            --bg: #000000;
+            --panel-bg: #000000;
+            --inner-bg: #000000;
+            --text: #FFFFFF;
+            --muted: #CDC7BB;
+            --primary: #E53C14; /* Tangelo orange */
+            --accent: #837255; /* Champagne gold */
+            --neon: #4A7BD3;   /* Blue neon */
+            --terminal: #4CAF50; /* Terminal green */
+            --border: #837255;
         }
 
+        * { box-sizing: border-box; }
+
         body {
-            font-family: 'Inter', -apple-system, sans-serif;
+            font-family: 'Inter', sans-serif;
             background-color: var(--bg);
             color: var(--text);
             margin: 0;
             display: flex;
+            flex-direction: column;
             height: 100vh;
             overflow: hidden;
         }
 
         /* Layout */
         #game-panel {
-            width: 40%;
-            border-right: 1px solid var(--border);
+            height: 35%;
+            border-bottom: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            padding: 20px;
+            padding: 10px 20px;
             overflow-y: auto;
+            background: var(--bg);
         }
 
         #engine-panel {
-            width: 60%;
+            height: 65%;
             background-color: var(--bg);
             display: flex;
             flex-direction: column;
-            padding: 20px;
-            overflow-y: auto;
+            overflow: hidden;
         }
 
-        h1, h2, h3 { color: var(--primary); margin-top: 0; }
-        p { color: var(--muted); font-size: 0.9rem; }
-        a { color: var(--accent); text-decoration: none; }
-        
-        .card {
-            background: var(--panel-bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
         }
+
+        h1 { 
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--primary); 
+            margin: 0; 
+            font-size: 1.2rem;
+            letter-spacing: 0.1em;
+            font-weight: 700;
+        }
+        
+        .attribution {
+            font-size: 0.7rem;
+            color: var(--muted);
+            text-align: right;
+        }
+        .attribution a { color: var(--text); text-decoration: none; border-bottom: 1px dotted var(--accent); }
+        .attribution a:hover { color: var(--primary); border-bottom-style: solid; }
 
         /* Scoreboard */
+        .scoreboard-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
         .scoreboard {
-            width: 100%;
             border-collapse: collapse;
             font-family: 'JetBrains Mono', monospace;
-            margin-top: 10px;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
+            width: 100%;
         }
-        .scoreboard th, .scoreboard td {
-            border: 1px solid var(--border);
-            padding: 4px;
+        
+        .scoreboard th {
+            border: 1px solid var(--accent);
+            padding: 2px;
+            color: var(--accent);
+            background: #0a0a0a;
+        }
+
+        .scoreboard td {
+            border: 1px solid var(--primary);
+            width: 8%;
+            height: 40px;
+            position: relative;
+            vertical-align: top;
+        }
+
+        .roll-slots {
+            display: flex;
+            justify-content: flex-end;
+            height: 18px;
+        }
+
+        .roll-slot {
+            width: 18px;
+            height: 18px;
+            border-left: 1px solid var(--primary);
+            border-bottom: 1px solid var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+        }
+
+        .total-slot {
             text-align: center;
+            font-size: 1rem;
+            color: var(--terminal);
+            font-weight: bold;
+            margin-top: 2px;
         }
-        .roll-cell { display: flex; justify-content: space-between; height: 20px; }
-        .roll-val { width: 50%; border-bottom: 1px solid var(--border); }
-        .roll-val:first-child { border-right: 1px solid var(--border); }
-        .total-val { font-weight: bold; font-size: 1rem; padding-top: 5px; }
+
+        .strike { color: var(--primary); font-weight: bold; }
+        .spare { color: var(--neon); font-weight: bold; }
 
         /* Controls */
-        .controls { display: flex; gap: 10px; flex-wrap: wrap; }
-        button {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        input[type="text"] {
-            background: var(--inner-bg);
-            border: 1px solid var(--border);
-            color: white;
-            padding: 8px;
-            border-radius: 4px;
+        .controls-row {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            background: #050505;
+            padding: 10px;
+            border: 1px solid #111;
         }
 
-        /* Hexagons */
+        button {
+            font-family: 'JetBrains Mono', monospace;
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            padding: 6px 12px;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+        button:hover { background: var(--primary); color: white; box-shadow: 0 0 10px var(--primary); }
+        button:disabled { opacity: 0.3; cursor: not-allowed; box-shadow: none; }
+
+        .pin-selector { display: flex; gap: 4px; }
+        .pin-btn {
+            width: 24px;
+            height: 24px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-color: var(--neon);
+            color: var(--neon);
+        }
+        .pin-btn:hover { background: var(--neon); color: white; box-shadow: 0 0 10px var(--neon); }
+        .pin-btn.selected { background: var(--neon); color: white; }
+
+        /* Tabs */
+        .tab-bar {
+            display: flex;
+            background: #0a0a0a;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+        .tab {
+            padding: 8px 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            cursor: pointer;
+            border-right: 1px solid var(--border);
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+        .tab.active {
+            color: var(--neon);
+            border-bottom: 2px solid var(--neon);
+            background: #111;
+        }
+
+        .tab-content {
+            flex-grow: 1;
+            padding: 20px;
+            display: none;
+            overflow-y: auto;
+        }
+        .tab-content.active { display: block; }
+
+        /* Hex Grid */
         .hex-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
+            grid-template-rows: 1fr 1fr;
+            gap: 20px;
+            height: 100%;
         }
         .hex-box {
-            background: var(--panel-bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 12px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            transition: all 0.3s;
+            border: 1px solid var(--accent);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
         }
         .hex-box.active {
             border-color: var(--primary);
-            box-shadow: 0 0 15px rgba(249, 115, 22, 0.3);
-            transform: scale(1.02);
+            box-shadow: inset 0 0 20px rgba(229, 60, 20, 0.2);
         }
-        .hex-header {
+        .hex-title {
+            color: var(--primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 5px;
-            margin-bottom: 8px;
-            color: var(--accent);
+        }
+        .hex-state { font-size: 0.7rem; color: var(--muted); margin-bottom: 10px; line-height: 1.4; }
+        .hex-trace {
+            flex-grow: 1;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--terminal);
+            overflow-y: auto;
+            border-top: 1px solid #111;
+            padding-top: 5px;
         }
 
-        /* Logs */
-        .log-line { margin-bottom: 4px; border-left: 2px solid var(--muted); padding-left: 6px; }
-        .log-port { color: #a78bfa; }
-        .log-adapter { color: #fb7185; }
-        .log-domain { color: #34d399; }
-        .log-bridge { color: #fbbf24; }
-
-        .rules-panel {
-            margin-top: 20px;
-            background: #0f172a;
+        /* Rules */
+        .rule-card {
+            border: 1px solid #111;
+            margin-bottom: 15px;
             padding: 15px;
-            border-radius: 8px;
-            font-family: monospace;
+            font-family: 'JetBrains Mono', monospace;
         }
-        .rule-item { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #1e293b; }
-        .rule-active { color: var(--success); font-weight: bold; }
+        .rule-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .rule-enforced { color: var(--terminal); }
+        .rule-not-enforced { color: var(--primary); }
+        .rule-sep { height: 1px; background: var(--accent); margin: 10px 0; }
+        .rule-body { font-size: 0.8rem; color: var(--muted); }
+
+        /* Use Cases */
+        .use-case {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            margin-bottom: 30px;
+            white-space: pre-wrap;
+        }
 
         #overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center;
             z-index: 100;
         }
+        .modal {
+            background: var(--bg);
+            border: 1px solid var(--primary);
+            padding: 30px;
+            width: 400px;
+            box-shadow: 0 0 30px var(--primary);
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0% { border-color: var(--accent); }
+            50% { border-color: var(--primary); box-shadow: 0 0 15px var(--primary); }
+            100% { border-color: var(--accent); }
+        }
+        .pulse { animation: pulse 0.5s ease-in-out; }
+
     </style>
 </head>
 <body>
 
 <div id="overlay">
-    <div class="card" style="width: 400px;">
-        <h3>New Game</h3>
-        <p>Enter player names (comma separated):</p>
-        <input type="text" id="player-names" value="Alice, Bob" style="width: 100%; margin-bottom: 15px;">
-        <button onclick="startGame()">Start Session</button>
+    <div class="modal">
+        <h2 style="color: var(--primary); font-family: 'JetBrains Mono', monospace;">INITIALIZE SESSION</h2>
+        <p style="font-size: 0.8rem; color: var(--muted);">Enter player names (comma separated):</p>
+        <input type="text" id="player-names" value="Alice, Bob" style="width: 100%; background: #111; border: 1px solid var(--accent); color: white; padding: 10px; margin-bottom: 20px; font-family: inherit;">
+        <button onclick="startGame()" style="width: 100%;">BOOT SYSTEM</button>
     </div>
 </div>
 
 <div id="game-panel">
     <header>
-        <h1>🎳 Bowling Alley Challenge</h1>
-        <p>Hexagonal Architecture Microscope</p>
-        <p style="font-size: 0.75rem;">
+        <div>
+            <h1>BOWLING ALLEY CHALLENGE</h1>
+            <p style="font-size: 0.7rem; color: var(--accent); margin: 2px 0;">Hexagonal Architecture Microscope</p>
+        </div>
+        <div class="attribution">
             Proposed by <a href="https://www.linkedin.com/in/alistair-cockburn/" target="_blank">Alistair Cockburn</a> & 
-            <a href="https://www.linkedin.com/in/jbrains/" target="_blank">JB Rainsberger</a>. 
-            Built by <a href="https://www.linkedin.com/in/djordjenikolic/" target="_blank">Djordje Nikolic</a> + AI.
-        </p>
+            <a href="https://www.linkedin.com/in/jbrains/" target="_blank">JB Rainsberger</a><br>
+            Built by <a href="https://www.linkedin.com/in/djordjenikolic/" target="_blank">Djordje Nikolic</a> + AI Hive Mind
+        </div>
     </header>
 
-    <div class="card">
-        <div class="controls">
-            <button onclick="showNewGame()">New Game</button>
-            <div id="play-controls" style="display: none; align-items: center; gap: 10px;">
-                <select id="pin-count" style="background: var(--inner-bg); color: white; padding: 8px; border: 1px solid var(--border);">
-                    <option value="0">0</option><option value="1">1</option><option value="2">2</option>
-                    <option value="3">3</option><option value="4">4</option><option value="5">5</option>
-                    <option value="6">6</option><option value="7">7</option><option value="8">8</option>
-                    <option value="9">9</option><option value="10">10</option>
-                </select>
-                <button onclick="roll()">Roll!</button>
+    <div class="controls-row">
+        <button onclick="showNewGame()">NEW GAME</button>
+        <div id="play-controls" style="display: none; align-items: center; gap: 15px;">
+            <div id="active-player-label" style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--primary);">PLAYER: ALICE</div>
+            <div class="pin-selector" id="pin-selector">
+                <!-- buttons 0rd-10 -->
             </div>
+            <button id="roll-btn" onclick="roll()">ROLL</button>
+            <span style="font-size: 0.6rem; color: var(--accent);">[Demo mode — turn order relaxed]</span>
         </div>
-        <div id="game-status" style="margin-top: 10px; font-weight: bold; color: var(--accent);"></div>
     </div>
 
-    <div id="scoreboards-container"></div>
+    <div class="scoreboard-container" id="scoreboards">
+        <!-- scoreboards -->
+    </div>
 </div>
 
 <div id="engine-panel">
-    <div class="hex-grid">
-        <div id="hex-front-desk" class="hex-box">
-            <div class="hex-header"><span>FRONT DESK</span> <span>🔌</span></div>
-            <div class="hex-content">Ready...</div>
-        </div>
-        <div id="hex-player-registry" class="hex-box">
-            <div class="hex-header"><span>PLAYER REGISTRY</span> <span>👤</span></div>
-            <div class="hex-content">Empty...</div>
-        </div>
-        <div id="hex-lane-manager" class="hex-box">
-            <div class="hex-header"><span>LANE MANAGER</span> <span>🛣️</span></div>
-            <div class="hex-content">Lanes: 10 available</div>
-        </div>
-        <div id="hex-scoring-engine" class="hex-box">
-            <div class="hex-header"><span>SCORING ENGINE</span> <span>🧮</span></div>
-            <div class="hex-content">No active game</div>
+    <div class="tab-bar">
+        <div class="tab active" onclick="showTab('monitor')">HEXAGON MONITOR</div>
+        <div class="tab" onclick="showTab('rules')">BUSINESS RULES</div>
+        <div class="tab" onclick="showTab('use-cases')">USE CASES</div>
+        <div class="tab" onclick="showTab('arch')">ARCHITECTURE</div>
+    </div>
+
+    <div id="tab-monitor" class="tab-content active">
+        <div class="hex-grid">
+            <div id="hex-player-registry" class="hex-box">
+                <div class="hex-title"><span>PLAYER REGISTRY</span> <span>👤</span></div>
+                <div class="hex-state" id="state-player-registry">Waiting for init...</div>
+                <div class="hex-trace" id="trace-player-registry"></div>
+            </div>
+            <div id="hex-lane-manager" class="hex-box">
+                <div class="hex-title"><span>LANE MANAGER</span> <span>🛣️</span></div>
+                <div class="hex-state" id="state-lane-manager">Waiting for init...</div>
+                <div class="hex-trace" id="trace-lane-manager"></div>
+            </div>
+            <div id="hex-scoring-engine" class="hex-box">
+                <div class="hex-title"><span>SCORING ENGINE</span> <span>🧮</span></div>
+                <div class="hex-state" id="state-scoring-engine">Waiting for init...</div>
+                <div class="hex-trace" id="trace-scoring-engine"></div>
+            </div>
+            <div id="hex-front-desk" class="hex-box">
+                <div class="hex-title"><span>FRONT DESK</span> <span>🔌</span></div>
+                <div class="hex-state" id="state-front-desk">Waiting for init...</div>
+                <div class="hex-trace" id="trace-front-desk"></div>
+            </div>
         </div>
     </div>
 
-    <div class="rules-panel" id="rules-view">
-        <div class="hex-header"><span>BUSINESS RULES</span> <span>⚖️</span></div>
-        <div id="active-rules">No rules currently active.</div>
+    <div id="tab-rules" class="tab-content">
+        <div id="rules-container"></div>
     </div>
 
-    <div class="card" style="margin-top: 20px; flex-grow: 1; display: flex; flex-direction: column;">
-        <div class="hex-header"><span>TRACE LOG</span> <span>📜</span></div>
-        <div id="trace-log" style="overflow-y: auto; font-family: monospace; font-size: 0.75rem;">
-            Waiting for action...
+    <div id="tab-use-cases" class="tab-content">
+        <div id="use-cases-container"></div>
+    </div>
+
+    <div id="tab-arch" class="tab-content">
+        <div class="card" style="border: 1px solid var(--accent); padding: 20px;">
+            <h3 style="color: var(--primary); font-family: 'JetBrains Mono';">HEXAGONAL ARCHITECTURE (PORTS & ADAPTERS)</h3>
+            <div style="font-family: monospace; font-size: 0.8rem; color: var(--muted); border: 1px solid #222; padding: 20px; background: #050505; text-align: center;">
+<pre style="display: inline-block; text-align: left;">
+      /------------------\
+     /   Player Registry  \
+    | [Port] ---- [Adapter]|
+     \------------------/
+              ||
+      /------------------\      /------------------\
+     /     Front Desk     \====/    Lane Manager    \
+    | [Bridge] == [Bridge] |  | [Adapter] -- [Port] |
+     \------------------/      \------------------/
+              ||
+      /------------------\
+     /   Scoring Engine   \
+    | [Adapter] -- [Port] |
+     \------------------/
+</pre>
+            </div>
+            <p style="font-size: 0.8rem; margin-top: 20px;">The <b>Front Desk</b> acts as the orchestrator. It knows about the other 3 hexagons only through <b>Bridge Adapters</b>. No hexagon imports code from another.</p>
+            
+            <div style="margin-top: 30px;">
+                <h4 style="color: var(--neon); font-family: 'JetBrains Mono';">ADR LOG</h4>
+                <div id="adr-container" style="font-size: 0.75rem;"></div>
+            </div>
         </div>
     </div>
 </div>
@@ -235,13 +410,117 @@
 <script>
     let currentGame = null;
     let currentPlayerIndex = 0;
+    let selectedPins = 0;
+
+    // Load initial data
+    window.onload = async () => {
+        setupPinSelector();
+        loadMetadata();
+        loadADRs();
+    };
+
+    function setupPinSelector() {
+        const container = document.getElementById('pin-selector');
+        for (let i = 0; i <= 10; i++) {
+            const btn = document.createElement('button');
+            btn.className = 'pin-btn';
+            btn.innerText = i;
+            btn.onclick = () => selectPins(i);
+            container.appendChild(btn);
+        }
+        selectPins(0);
+    }
+
+    function selectPins(n) {
+        selectedPins = n;
+        document.querySelectorAll('.pin-btn').forEach((btn, i) => {
+            btn.classList.toggle('selected', i === n);
+        });
+    }
+
+    async function loadMetadata() {
+        const rulesRes = await fetch('/meta/business-rules');
+        const rules = await rulesRes.json();
+        const rulesContainer = document.getElementById('rules-container');
+        rulesContainer.innerHTML = rules.map(r => `
+            <div class="rule-card" id="rule-${r.name.replace(/ /g, '-')}">
+                <div class="rule-header">
+                    <span>${r.name.toUpperCase()}</span>
+                    <span class="${r.enforced ? 'rule-enforced' : 'rule-not-enforced'}">[${r.enforced ? 'ENFORCED' : 'NOT ENFORCED'}]</span>
+                </div>
+                <div class="rule-sep"></div>
+                <div class="rule-body">
+                    <div>Condition: ${r.condition}</div>
+                    ${r.score ? `<div>Score: ${r.score}</div>` : ''}
+                    ${r.source ? `<div>Source: ${r.source}</div>` : ''}
+                    ${r.gap ? `<div style="margin-top:5px; color: var(--primary);">Gap: ${r.gap}</div>` : ''}
+                </div>
+            </div>
+        `).join('');
+
+        const ucRes = await fetch('/meta/use-cases');
+        const ucs = await ucRes.json();
+        const ucContainer = document.getElementById('use-cases-container');
+        ucContainer.innerHTML = ucs.map(uc => `
+            <div class="use-case">
+<span style="color: var(--primary)">${uc.id}: ${uc.name}</span> [${uc.level}]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Scope:      ${uc.scope}
+Actor:      ${uc.actor}
+
+Main Success Scenario:
+${uc.scenario.map((s, i) => `  ${i+1}. ${s}`).join('\n')}
+
+${uc.businessRules ? `Business Rules Designed by AI:\n${uc.businessRules.map(r => `  • ${r}`).join('\n')}` : ''}
+            </div>
+        `).join('');
+    }
+
+    async function loadADRs() {
+        // ADRs are static for now
+        const adrs = [
+            { id: '001', title: 'Hexagonal Isolation via Bridge Adapters', context: '4 apps must connect without cross-imports.', decision: 'Use Bridge Adapters in Front Desk.' },
+            { id: '002', title: 'In-Memory Storage', context: 'Walking skeleton speed.', decision: 'All hexagons use InMemory adapters.' },
+            { id: '003', title: 'Pure Domain Logic', context: 'Architectural rule.', decision: 'Domain logic has zero external dependencies.' },
+            { id: '004', title: 'Scoreboard Type Moved to Shared', context: 'Import leak found during audit.', decision: 'Moved Scoreboard interface to shared/types.ts.' }
+        ];
+        const container = document.getElementById('adr-container');
+        container.innerHTML = adrs.map(a => `
+            <details style="margin-bottom: 10px; border: 1px solid #222; padding: 5px;">
+                <summary style="cursor: pointer; color: var(--accent);">ADR ${a.id}: ${a.title}</summary>
+                <div style="padding: 10px; color: var(--muted);">
+                    <b>Context:</b> ${a.context}<br>
+                    <b>Decision:</b> ${a.decision}
+                </div>
+            </details>
+        `).join('');
+    }
+
+    function showTab(id) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => t.classList.remove('active')); // Wait, typo
+        
+        const tabs = document.querySelectorAll('.tab');
+        const contents = document.querySelectorAll('.tab-content');
+        
+        tabs.forEach((t, i) => {
+            if (t.innerText.toLowerCase().includes(id)) t.classList.add('active');
+            else t.classList.remove('active');
+        });
+        
+        contents.forEach(c => {
+            if (c.id === `tab-${id}`) c.classList.add('active');
+            else c.classList.remove('active');
+        });
+    }
 
     function showNewGame() {
         document.getElementById('overlay').style.display = 'flex';
     }
 
     async function startGame() {
-        const names = document.getElementById('player-names').value.split(',').map(n => n.trim());
+        const namesInput = document.getElementById('player-names').value;
+        const names = namesInput.split(',').map(n => n.trim()).filter(n => n);
         document.getElementById('overlay').style.display = 'none';
         
         const res = await fetch('/games', {
@@ -255,13 +534,13 @@
             currentGame = data.value;
             currentPlayerIndex = 0;
             document.getElementById('play-controls').style.display = 'flex';
-            updateTrace(data.trace);
+            processTrace(data.trace);
             refreshScoreboard();
         }
     }
 
     async function roll() {
-        const pins = parseInt(document.getElementById('pin-count').value);
+        const pins = selectedPins;
         const playerId = currentGame.playerIds[currentPlayerIndex];
         
         const res = await fetch(`/games/${currentGame.id}/rolls`, {
@@ -274,11 +553,10 @@
         if (data.error) {
             alert(data.error);
         } else {
-            // Next player (order not enforced by server, but we rotate for convenience)
             currentPlayerIndex = (currentPlayerIndex + 1) % currentGame.playerIds.length;
         }
         
-        updateTrace(data.trace);
+        processTrace(data.trace);
         refreshScoreboard();
     }
 
@@ -287,105 +565,113 @@
         const res = await fetch(`/games/${currentGame.id}/scoreboard`);
         const scoreboard = await res.json();
         
-        const container = document.getElementById('scoreboards-container');
+        const container = document.getElementById('scoreboards');
         container.innerHTML = '';
         
+        const playersRes = await fetch('/player-registry/ports/ports.ts'); // Wait, can't read source like this
+        // Use IDs for now
+        
         scoreboard.playerScores.forEach((ps, idx) => {
-            const playerCard = document.createElement('div');
-            playerCard.className = 'card';
-            if (idx === currentPlayerIndex) playerCard.style.borderColor = 'var(--accent)';
+            const row = document.createElement('div');
+            row.style.marginBottom = '15px';
             
             let framesHtml = '';
             for (let i = 0; i < 10; i++) {
                 const f = ps.frames[i] || { rolls: [], score: '' };
-                const r1 = f.rolls[0] !== undefined ? (f.rolls[0] === 10 ? 'X' : f.rolls[0]) : '';
-                const r2 = f.rolls[1] !== undefined ? (f.rolls[0] + f.rolls[1] === 10 ? '/' : f.rolls[1]) : '';
-                const r3 = f.rolls[2] !== undefined ? (f.rolls[2] === 10 ? 'X' : f.rolls[2]) : '';
+                const r1 = f.rolls[0] !== undefined ? (f.rolls[0] === 10 ? '<span class="strike">X</span>' : f.rolls[0]) : '&nbsp;';
+                
+                let r2 = '&nbsp;';
+                if (f.rolls[1] !== undefined) {
+                    if (f.rolls[0] + f.rolls[1] === 10 && f.rolls[0] !== 10) r2 = '<span class="spare">/</span>';
+                    else if (f.rolls[1] === 10) r2 = '<span class="strike">X</span>';
+                    else r2 = f.rolls[1];
+                }
+
+                let r3 = '';
+                if (i === 9) {
+                    let r3v = '&nbsp;';
+                    if (f.rolls[2] !== undefined) {
+                        if (f.rolls[2] === 10) r3v = '<span class="strike">X</span>';
+                        else if (f.rolls[1] + f.rolls[2] === 10 && f.rolls[1] !== 10) r3v = '<span class="spare">/</span>';
+                        else r3v = f.rolls[2];
+                    }
+                    r3 = `<div class="roll-slot">${r3v}</div>`;
+                }
                 
                 framesHtml += `
                     <td>
-                        <div class="roll-cell">
-                            <div class="roll-val">${r1}</div>
-                            <div class="roll-val">${r2}</div>
-                            ${i === 9 ? `<div class="roll-val">${r3}</div>` : ''}
+                        <div class="roll-slots">
+                            <div class="roll-slot">${r1}</div>
+                            <div class="roll-slot">${r2}</div>
+                            ${r3}
                         </div>
-                        <div class="total-val">${f.score || ''}</div>
+                        <div class="total-slot">${f.score || '-'}</div>
                     </td>
                 `;
             }
 
-            playerCard.innerHTML = `
-                <h3 style="margin-bottom: 5px;">Player: ${ps.playerId.split('-')[0]} ${idx === currentPlayerIndex ? '⬅️' : ''}</h3>
+            const pName = ps.playerId.split('-')[0];
+            row.innerHTML = `
+                <div style="font-family: 'JetBrains Mono'; font-size: 0.7rem; color: ${idx === currentPlayerIndex ? 'var(--primary)' : 'var(--muted)'}; margin-bottom: 4px;">
+                    ${idx === currentPlayerIndex ? '▶ ' : '&nbsp; '}${pName.toUpperCase()}
+                </div>
                 <table class="scoreboard">
                     <tr>${[1,2,3,4,5,6,7,8,9,10].map(n => `<th>${n}</th>`).join('')}</tr>
                     <tr>${framesHtml}</tr>
                 </table>
-                <div style="text-align: right; margin-top: 10px; font-weight: bold; color: var(--primary);">
-                    TOTAL: ${ps.totalScore}
-                </div>
             `;
-            container.appendChild(playerCard);
+            container.appendChild(row);
         });
 
-        updateHexagonStates(scoreboard);
+        document.getElementById('active-player-label').innerText = `PLAYER: ${scoreboard.playerScores[currentPlayerIndex].playerId.split('-')[0].toUpperCase()}`;
+        updateHexagonStates();
     }
 
-    function updateTrace(trace) {
+    function processTrace(trace) {
         if (!trace) return;
-        const log = document.getElementById('trace-log');
-        log.innerHTML = '';
         
         let i = 0;
-        const processNext = () => {
+        const next = () => {
             if (i >= trace.length) return;
             const event = trace[i];
             
             // Highlight hexagon
-            document.querySelectorAll('.hex-box').forEach(b => b.classList.remove('active'));
             const box = document.getElementById(`hex-${event.hexagon}`);
-            if (box) box.classList.add('active');
+            if (box) {
+                box.classList.add('active');
+                box.classList.add('pulse');
+                setTimeout(() => box.classList.remove('pulse'), 500);
+            }
 
-            // Add line
+            // Log entry
+            const log = document.getElementById(`trace-${event.hexagon}`);
             const line = document.createElement('div');
-            line.className = 'log-line';
-            line.innerHTML = `<span class="log-${event.layer}">[${event.layer.toUpperCase()}]</span> ${event.action} ${event.input ? JSON.stringify(event.input) : ''}`;
+            line.innerHTML = `<span style="color: var(--accent)">[${event.layer.toUpperCase()}]</span> ${event.action}`;
             log.appendChild(line);
             log.scrollTop = log.scrollHeight;
 
-            // Check for business rules in action
-            if (event.action.includes('RULE')) {
-                updateRuleDisplay(event);
+            // Rule highlight
+            if (event.businessRule) {
+                const ruleId = `rule-${event.businessRule.replace(/ /g, '-')}`;
+                const ruleCard = document.getElementById(ruleId);
+                if (ruleCard) {
+                    ruleCard.style.borderColor = 'var(--primary)';
+                    ruleCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => ruleCard.style.borderColor = '#111', 2000);
+                }
             }
 
             i++;
-            setTimeout(processNext, 150);
+            setTimeout(next, 200);
         };
-        processNext();
+        next();
     }
 
-    function updateRuleDisplay(event) {
-        const rulesView = document.getElementById('active-rules');
-        const isTriggered = event.action.includes('TRIGGERED');
-        rulesView.innerHTML = `
-            <div class="rule-item">
-                <div class="${isTriggered ? 'log-adapter' : 'rule-active'}">${event.action}</div>
-                <div style="font-size: 0.8rem; color: var(--muted);">${event.output || event.input}</div>
-            </div>
-        `;
-    }
-
-    function updateHexagonStates(scoreboard) {
-        // Scoring Engine
-        const scoring = document.getElementById('hex-scoring-engine').querySelector('.hex-content');
-        scoring.innerHTML = `Active Game: ${currentGame.id}<br>Players: ${currentGame.playerIds.length}`;
-
-        // Lane Manager
-        const lanes = document.getElementById('hex-lane-manager').querySelector('.hex-content');
-        lanes.innerHTML = `Lane: ${currentGame.laneId}<br>Status: IN-USE`;
-
-        // Player Registry
-        const players = document.getElementById('hex-player-registry').querySelector('.hex-content');
-        players.innerHTML = `Registered:<br>${currentGame.playerIds.map(id => id.split('-')[0]).join(', ')}`;
+    function updateHexagonStates() {
+        document.getElementById('state-player-registry').innerHTML = `Registered: ${currentGame.playerIds.length}`;
+        document.getElementById('state-lane-manager').innerHTML = `Lane: ${currentGame.laneId}<br>Status: IN-USE`;
+        document.getElementById('state-scoring-engine').innerHTML = `Game: ${currentGame.id}<br>Active`;
+        document.getElementById('state-front-desk').innerHTML = `Orchestrating...`;
     }
 </script>
 

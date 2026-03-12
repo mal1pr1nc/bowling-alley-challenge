@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import path from 'path';
 import { FrontDeskDrivingPort } from '../ports/ports';
 import { Tracer } from '../../shared/tracer';
 
@@ -7,7 +8,8 @@ export class FrontDeskHttpAdapter {
 
   constructor(private service: FrontDeskDrivingPort, private tracer: Tracer) {
     this.app.use(express.json());
-    this.app.use(express.static('public'));
+    // Serve static files from public directory
+    this.app.use(express.static(path.join(__dirname, '../../public')));
     this.setupRoutes();
   }
 
@@ -71,80 +73,65 @@ export class FrontDeskHttpAdapter {
       }
     });
 
-    // GET /api/use-cases
-    this.app.get('/api/use-cases', (req: Request, res: Response) => {
+    // Metadata endpoints
+    this.app.get('/meta/business-rules', (req: Request, res: Response) => {
+      res.json([
+        { name: 'Strike rule', enforced: true, condition: 'First roll in frame = 10', score: '10 + next two rolls', source: 'scoring-engine/domain/scoring.ts:20' },
+        { name: 'Spare rule', enforced: true, condition: 'First + Second roll = 10', score: '10 + next one roll', source: 'scoring-engine/domain/scoring.ts:48' },
+        { name: 'Open frame rule', enforced: true, condition: 'First + Second roll < 10', score: 'Sum of rolls', source: 'scoring-engine/domain/scoring.ts:60' },
+        { name: '10th frame bonus rolls', enforced: true, condition: 'Strike or Spare in frame 10', score: 'Up to 3 rolls allowed', source: 'scoring-engine/domain/scoring.ts:70' },
+        { name: 'Pin count validation', enforced: true, condition: 'Roll pins must be 0-10; roll2 <= (10 - roll1)', expected: 'Reject invalid pin counts', gap: 'None (Hardened by AI)', note: 'Strict validation implemented by Algorithmic Sink' },
+        { name: 'Turn order', enforced: false, condition: 'Players alternate per frame', status: 'Demo mode — turn order relaxed', gap: 'AI-designed system allows any player at any time' },
+        { name: 'Lane capacity', enforced: true, condition: 'One game per lane', source: 'lane-manager/adapters/service.ts:10' },
+        { name: 'Game completion detection', enforced: true, condition: 'Checks all players finish 10 frames', source: 'scoring-engine/adapters/service.ts:50' },
+        { name: 'Player registration rollback', enforced: false, condition: 'Remove players if booking fails', gap: 'Players persist even if lane assignment fails' }
+      ]);
+    });
+
+    this.app.get('/meta/use-cases', (req: Request, res: Response) => {
       res.json([
         {
+          id: 'UC0',
+          level: 'SUMMARY LEVEL',
+          name: 'RUN A BOWLING SESSION',
+          scope: 'Bowling Alley System (all 4 hexagons)',
+          actor: 'Front Desk Attendant',
+          scenario: [
+            'Attendant submits player names for a new game',
+            'Player Registry creates a record per player [AI decision: shoe size hardcoded to 10]',
+            'Lane Manager finds first available lane, marks it in-use',
+            'Scoring Engine initializes game with empty roll arrays',
+            'Bowler rolls — Attendant records pin count',
+            'Scoring Engine calculates frames (strike/spare/open)',
+            'Attendant views scoreboard at any time',
+            'Game auto-completes when all players finish 10 frames'
+          ],
+          businessRules: [
+            'Player identity scheme (timestamp-based)',
+            'Shoe size as required field, hardcoded by orchestrator',
+            'Lane assignment strategy (first-available sequential)',
+            'Result<T,E> monad error model (no exceptions)',
+            'In-memory persistence (dies with restart)'
+          ]
+        },
+        {
           id: 'UC1',
-          name: 'Book Game',
+          level: 'USER GOAL LEVEL',
+          name: 'BOOK GAME',
           actor: 'Front Desk Attendant',
           goal: 'Start a new bowling game for a group of players',
-          scope: 'Bowling Alley System (Front Desk hexagon)',
-          level: 'User Goal',
-          preconditions: ['At least one lane is available', 'Player names are provided'],
-          success: 'Game is created, lane is reserved, all players are registered',
+          scope: 'Front Desk hexagon (orchestrates 3 others)',
+          preconditions: ['At least one lane is available', '1-4 player names provided'],
+          success: 'Game created, lane reserved, all players registered',
           scenario: [
-            'Attendant submits player names',
-            'System registers each player in Player Registry',
-            'System requests an available lane from Lane Manager',
-            'Lane Manager marks lane as in-use',
-            'System initializes game state in Scoring Engine',
-            'System returns game confirmation with game ID and lane assignment'
-          ],
-          extensions: [
-            { cond: 'Player registration fails', steps: ['System returns error, no lane is assigned'] },
-            { cond: 'No lanes available', steps: ['System returns "no lanes available" error', 'Already-registered players remain in registry (no rollback)'] }
-          ]
-        },
-        {
-          id: 'UC2',
-          name: 'Record Roll',
-          actor: 'Bowler / Lane Sensor',
-          goal: 'Register the pins knocked down in a single roll',
-          scope: 'Bowling Alley System (Scoring Engine hexagon)',
-          level: 'Subfunction',
-          preconditions: ['A game is in progress'],
-          success: 'Roll is recorded and score is updated',
-          scenario: [
-            'Roll information (GameID, PlayerID, Pins) is sent to Front Desk',
-            'Front Desk delegates to Scoring Engine',
-            'Scoring Engine validates the roll pins',
-            'Scoring Engine updates the player\'s frames and calculates bonuses',
-            'Scoreboard reflects the updated total'
-          ],
-          extensions: [
-            { cond: 'Invalid pin count', steps: ['System rejects roll with explanation'] }
-          ]
-        },
-        {
-          id: 'UC3',
-          name: 'View Scoreboard',
-          actor: 'Bowler / Attendant',
-          goal: 'View current frames, running totals, and strike/spare markers',
-          scope: 'Bowling Alley System (Scoring Engine hexagon)',
-          level: 'User Goal',
-          preconditions: ['A game exists'],
-          success: 'Scoreboard is displayed',
-          scenario: [
-            'Attendant requests scoreboard for a GameID',
-            'Scoring Engine returns all frames and the current score',
-            'Front Desk displays the result'
-          ]
-        },
-        {
-          id: 'UC4',
-          name: 'Switch Lane',
-          actor: 'Attendant / Manager',
-          goal: 'Move a game in progress to a different lane due to mechanical failure',
-          scope: 'Bowling Alley System (Front Desk orchestration)',
-          level: 'User Goal',
-          preconditions: ['A game is in progress', 'Another lane is available'],
-          success: 'Game continues on new lane, old lane is released',
-          scenario: [
-            'Manager requests a lane switch for an active game',
-            'Front Desk requests a new available lane from Lane Manager',
-            'Front Desk updates the Scoring Engine with the new lane ID',
-            'Front Desk requests Lane Manager to release the old lane'
+            'Attendant submits player names via POST /games',
+            'Front Desk calls Player Registry for each name',
+            'Player Registry creates player record, returns ID',
+            'Front Desk calls Lane Manager to assign a lane',
+            'Lane Manager finds first available lane, marks in-use',
+            'Front Desk calls Scoring Engine to initialize game',
+            'Scoring Engine creates game state with player IDs and lane',
+            'Front Desk returns game confirmation (game ID, lane, player IDs)'
           ]
         }
       ]);

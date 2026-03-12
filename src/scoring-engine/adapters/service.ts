@@ -32,7 +32,14 @@ export class ScoringEngineService implements ScoringEngineDrivingPort {
     // Validation Rule
     if (pins < 0 || pins > 10) {
       const err = failure(new Error('Roll pins must be 0-10'));
-      this.tracer?.trace({ hexagon: 'scoring-engine', layer: 'domain', action: 'VALIDATION RULE [TRIGGERED]', input: { pins }, output: 'Roll pins must be 0-10' });
+      this.tracer?.trace({ 
+        hexagon: 'scoring-engine', 
+        layer: 'domain', 
+        action: 'VALIDATION RULE [TRIGGERED]', 
+        input: { pins }, 
+        output: 'Roll pins must be 0-10',
+        businessRule: 'Pin count validation'
+      });
       return err;
     }
 
@@ -52,7 +59,13 @@ export class ScoringEngineService implements ScoringEngineDrivingPort {
         const firstRoll = currentFrame.rolls[0];
         if (pins > (10 - firstRoll)) {
           const msg = `Rejected: pins=${pins} exceeds remaining pins (${10 - firstRoll}). Frame ${frames.length}, Roll 2: First roll was ${firstRoll}, max allowed is ${10 - firstRoll}`;
-          this.tracer?.trace({ hexagon: 'scoring-engine', layer: 'domain', action: 'VALIDATION RULE [TRIGGERED]', output: msg });
+          this.tracer?.trace({ 
+            hexagon: 'scoring-engine', 
+            layer: 'domain', 
+            action: 'VALIDATION RULE [TRIGGERED]', 
+            output: msg,
+            businessRule: 'Pin count validation'
+          });
           return failure(new Error(msg));
         }
       }
@@ -64,21 +77,46 @@ export class ScoringEngineService implements ScoringEngineDrivingPort {
           const roll1 = f10.rolls[0];
           if (roll1 < 10 && pins > (10 - roll1)) {
             const msg = `Rejected: pins=${pins} exceeds remaining pins (${10 - roll1}). Frame 10, Roll 2: First roll was ${roll1}, max allowed is ${10 - roll1}`;
-            this.tracer?.trace({ hexagon: 'scoring-engine', layer: 'domain', action: 'VALIDATION RULE [TRIGGERED]', output: msg });
+            this.tracer?.trace({ 
+              hexagon: 'scoring-engine', 
+              layer: 'domain', 
+              action: 'VALIDATION RULE [TRIGGERED]', 
+              output: msg,
+              businessRule: 'Pin count validation'
+            });
             return failure(new Error(msg));
           }
         } else if (f10.rolls.length === 2) {
           const roll1 = f10.rolls[0];
           const roll2 = f10.rolls[1];
-          if (roll1 === 10 && roll2 < 10 && pins > (10 - roll2)) {
-            const msg = `Rejected: pins=${pins} exceeds remaining pins (${10 - roll2}). Frame 10, Roll 3: After strike, second roll was ${roll2}, max allowed is ${10 - roll2}`;
-            this.tracer?.trace({ hexagon: 'scoring-engine', layer: 'domain', action: 'VALIDATION RULE [TRIGGERED]', output: msg });
-            return failure(new Error(msg));
+          // If roll1 + roll2 < 10, frame is complete. If >= 10, we have a 3rd roll.
+          if (roll1 === 10 || (roll1 + roll2 === 10)) {
+             // We have a 3rd roll. If roll2 was a strike, pins can be 10.
+             // If roll1 was strike and roll2 was not, pins <= 10 - roll2.
+             if (roll1 === 10 && roll2 < 10 && pins > (10 - roll2)) {
+                const msg = `Rejected: pins=${pins} exceeds remaining pins (${10 - roll2}). Frame 10, Roll 3: After strike, second roll was ${roll2}, max allowed is ${10 - roll2}`;
+                this.tracer?.trace({ 
+                  hexagon: 'scoring-engine', 
+                  layer: 'domain', 
+                  action: 'VALIDATION RULE [TRIGGERED]', 
+                  output: msg,
+                  businessRule: 'Pin count validation'
+                });
+                return failure(new Error(msg));
+             }
           }
         }
       } else {
         return failure(new Error('Game already complete for this player'));
       }
+    }
+
+    // If we get here, rule applied successfully
+    const framesBefore = calculateFrames(playerRolls);
+    if (pins === 10 && (!currentFrame || currentFrame.isComplete)) {
+        this.tracer?.trace({ hexagon: 'scoring-engine', layer: 'domain', action: 'STRIKE RULE [ACTIVE]', businessRule: 'Strike rule' });
+    } else if (currentFrame && !currentFrame.isComplete && currentFrame.rolls.length === 1 && (currentFrame.rolls[0] + pins === 10)) {
+        this.tracer?.trace({ hexagon: 'scoring-engine', layer: 'domain', action: 'SPARE RULE [ACTIVE]', businessRule: 'Spare rule' });
     }
 
     playerRolls.push(pins);
@@ -116,6 +154,7 @@ export class ScoringEngineService implements ScoringEngineDrivingPort {
   }
 
   async changeLane(gameId: GameId, newLaneId: string): Promise<Result<void>> {
+    this.tracer?.trace({ hexagon: 'scoring-engine', layer: 'port', action: 'changeLane', input: { gameId, newLaneId } });
     const data = await this.storage.findById(gameId);
     if (!data) return failure(new Error('Game not found'));
 

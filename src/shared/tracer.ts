@@ -5,15 +5,16 @@ export interface TraceEvent {
   action: string;
   input?: any;
   output?: any;
+  businessRule?: string; // which rule applied, if any
 }
 
 export class Tracer {
   private events: TraceEvent[] = [];
-  
+
   trace(event: Omit<TraceEvent, 'timestamp'>): void {
     this.events.push({ ...event, timestamp: Date.now() });
   }
-  
+
   flush(): TraceEvent[] {
     const events = [...this.events];
     this.events = [];
