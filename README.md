@@ -24,6 +24,7 @@ Built using Dr. Alistair Cockburn's Hexagonal Architecture (Ports & Adapters).
 
 ## Acknowledgments
 Proposed by **J.B. Rainsberger** and **Alistair Cockburn**.
+Built by **[Djordje Babic](https://www.linkedin.com/in/djordje-babic/)** + AI Hive Mind.
 Deployed as part of the Hivemind OS experiment.
 
 ---

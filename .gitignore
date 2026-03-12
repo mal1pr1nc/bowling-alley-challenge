@@ -3,6 +3,8 @@ dist/
 *.log
 *.err
 .env
+deploy.json
+*.tar.gz
 package-lock.json
 bowling-alley.tar.gz
 bowling alley 3.jpg

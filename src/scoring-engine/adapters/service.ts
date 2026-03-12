@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Game, GameId, PlayerId, Result, success, failure, Scoreboard } from '../../shared/types';
 import { ScoringEngineDrivingPort, GameStorageDrivenPort } from '../ports/ports';
 import { calculateFrames } from '../domain/scoring';
@@ -12,7 +13,7 @@ export class ScoringEngineService implements ScoringEngineDrivingPort {
   async startGame(laneId: string, playerIds: PlayerId[]): Promise<Result<Game>> {
     this.tracer?.trace({ hexagon: 'scoring-engine', layer: 'port', action: 'startGame', input: { laneId, playerIds } });
     const game: Game = {
-      id: `g-${Date.now()}`,
+      id: `g-${crypto.randomUUID()}`,
       laneId,
       playerIds,
       isComplete: false,

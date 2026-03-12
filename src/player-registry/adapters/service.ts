@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Player, PlayerId, Result, success, failure } from '../../shared/types';
 import { PlayerRegistryDrivingPort, PlayerStorageDrivenPort } from '../ports/ports';
 import { Tracer } from '../../shared/tracer';
@@ -12,7 +13,7 @@ export class PlayerRegistryService implements PlayerRegistryDrivingPort {
     this.tracer?.trace({ hexagon: 'player-registry', layer: 'port', action: 'registerPlayer', input: { name, shoeSize } });
     
     const player: Player = {
-      id: `p-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `p-${crypto.randomUUID()}`,
       name,
       shoeSize,
     };

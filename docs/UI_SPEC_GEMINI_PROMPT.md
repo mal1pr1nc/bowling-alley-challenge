@@ -78,7 +78,7 @@ Proposed by Alistair Cockburn & JB Rainsberger | Built by Djordje Nikolic + AI H
 ```
 - "Alistair Cockburn" links to https://www.linkedin.com/in/alistair-cockburn/ (new tab)
 - "JB Rainsberger" links to https://www.linkedin.com/in/jbrains/ (new tab)
-- "Djordje Nikolic" links to https://www.linkedin.com/in/djordjenikolic/ (new tab)
+- "Djordje Babic" links to https://www.linkedin.com/in/djordje-babic/ (new tab)
 - Header text in tangelo orange, names in white with gold underline on hover.
 
 **Game controls (left side):**

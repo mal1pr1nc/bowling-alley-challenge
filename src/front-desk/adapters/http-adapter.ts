@@ -1,13 +1,64 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import { FrontDeskDrivingPort } from '../ports/ports';
 import { Tracer } from '../../shared/tracer';
+
+// Simple in-memory rate limiter (no dependency needed)
+const rateLimiter = (() => {
+  const hits = new Map<string, { count: number; resetAt: number }>();
+  const WINDOW_MS = 60_000; // 1 minute
+  const MAX_HITS = 30;      // 30 requests per minute per IP
+
+  return (req: Request, res: Response, next: NextFunction) => {
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const now = Date.now();
+    const record = hits.get(ip);
+
+    if (!record || now > record.resetAt) {
+      hits.set(ip, { count: 1, resetAt: now + WINDOW_MS });
+      return next();
+    }
+
+    record.count++;
+    if (record.count > MAX_HITS) {
+      res.set('Retry-After', String(Math.ceil((record.resetAt - now) / 1000)));
+      return res.status(429).json({ error: 'Too many requests. Try again later.' });
+    }
+    next();
+  };
+})();
+
+// Input sanitization
+function sanitizeName(name: unknown): string | null {
+  if (typeof name !== 'string') return null;
+  const trimmed = name.trim();
+  if (trimmed.length === 0 || trimmed.length > 50) return null;
+  // Alphanumeric, spaces, hyphens, apostrophes only
+  if (!/^[a-zA-Z0-9 '\-]+$/.test(trimmed)) return null;
+  return trimmed;
+}
 
 export class FrontDeskHttpAdapter {
   private app = express();
 
   constructor(private service: FrontDeskDrivingPort, private tracer: Tracer) {
-    this.app.use(express.json());
+    // Security: disable x-powered-by header (H2)
+    this.app.disable('x-powered-by');
+
+    // Security: limit JSON body size
+    this.app.use(express.json({ limit: '16kb' }));
+
+    // Security: rate limiting on all routes
+    this.app.use(rateLimiter);
+
+    // Security: set basic security headers
+    this.app.use((req: Request, res: Response, next: NextFunction) => {
+      res.set('X-Content-Type-Options', 'nosniff');
+      res.set('X-Frame-Options', 'DENY');
+      res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+      next();
+    });
+
     this.app.use(express.static(path.join(__dirname, '../../../public')));
     this.setupRoutes();
   }
@@ -15,7 +66,7 @@ export class FrontDeskHttpAdapter {
   private setupRoutes() {
     // API Status
     this.app.get('/api/status', (req: Request, res: Response) => {
-      res.json({ 
+      res.json({
         message: 'Bowling Alley Hexagonal API is running',
         endpoints: [
           'POST /games',
@@ -33,9 +84,23 @@ export class FrontDeskHttpAdapter {
         return res.status(400).json({ error: 'playerNames must be an array' });
       }
 
-      const result = await this.service.bookGame(playerNames);
+      // Input validation (L3)
+      if (playerNames.length < 1 || playerNames.length > 4) {
+        return res.status(400).json({ error: 'Must have 1-4 players' });
+      }
+
+      const sanitized: string[] = [];
+      for (const name of playerNames) {
+        const clean = sanitizeName(name);
+        if (!clean) {
+          return res.status(400).json({ error: `Invalid player name: must be 1-50 alphanumeric characters` });
+        }
+        sanitized.push(clean);
+      }
+
+      const result = await this.service.bookGame(sanitized);
       const trace = this.tracer.flush();
-      
+
       if (result.success) {
         res.status(201).json({ value: result.value, trace });
       } else {
@@ -47,9 +112,14 @@ export class FrontDeskHttpAdapter {
     this.app.post('/games/:id/rolls', async (req: Request, res: Response) => {
       const { playerId, pins } = req.body;
       const gameId = req.params.id as string;
-      
+
       if (!playerId || typeof pins !== 'number') {
         return res.status(400).json({ error: 'playerId and pins (number) required' });
+      }
+
+      // Input validation (L3): pins must be integer 0-10
+      if (!Number.isInteger(pins) || pins < 0 || pins > 10) {
+        return res.status(400).json({ error: 'pins must be an integer between 0 and 10' });
       }
 
       const result = await this.service.recordRoll(gameId, playerId, pins);
@@ -89,16 +159,17 @@ export class FrontDeskHttpAdapter {
     // Metadata endpoints
     this.app.get('/meta/business-rules', (req: Request, res: Response) => {
       res.json([
-        { name: 'Strike rule', enforced: true, condition: 'First roll in frame = 10', score: '10 + next two rolls', source: 'scoring-engine/domain/scoring.ts:20' },
-        { name: 'Spare rule', enforced: true, condition: 'First + Second roll = 10', score: '10 + next one roll', source: 'scoring-engine/domain/scoring.ts:48' },
-        { name: 'Open frame rule', enforced: true, condition: 'First + Second roll < 10', score: 'Sum of rolls', source: 'scoring-engine/domain/scoring.ts:60' },
-        { name: '10th frame bonus rolls', enforced: true, condition: 'Strike or Spare in frame 10', score: 'Up to 3 rolls allowed', source: 'scoring-engine/domain/scoring.ts:70' },
-        { name: 'Pin count validation', enforced: true, condition: 'Roll pins must be 0-10; roll2 <= (10 - roll1)', expected: 'Reject invalid pin counts', gap: 'None (Hardened by AI)', note: 'Strict validation implemented by Algorithmic Sink' },
-        { name: 'Turn order', enforced: false, condition: 'Players alternate per frame', status: 'Demo mode — turn order relaxed', gap: 'AI-designed system allows any player at any time' },
-        { name: 'Lane capacity', enforced: true, condition: 'One game per lane', source: 'lane-manager/adapters/service.ts:10' },
-        { name: 'Game completion detection', enforced: true, condition: 'Checks all players finish 10 frames', source: 'scoring-engine/adapters/service.ts:50' },
+        { name: 'Strike rule', enforced: true, condition: 'First roll in frame = 10', score: '10 + next two rolls' },
+        { name: 'Spare rule', enforced: true, condition: 'First + Second roll = 10', score: '10 + next one roll' },
+        { name: 'Open frame rule', enforced: true, condition: 'First + Second roll < 10', score: 'Sum of rolls' },
+        { name: '10th frame bonus rolls', enforced: true, condition: 'Strike or Spare in frame 10', score: 'Up to 3 rolls allowed' },
+        { name: 'Pin count validation', enforced: true, condition: 'Roll pins must be integer 0-10', note: 'Validated at API boundary' },
+        { name: 'Player name validation', enforced: true, condition: 'Alphanumeric, 1-50 chars, max 4 players', note: 'Sanitized at API boundary' },
+        { name: 'Turn order', enforced: false, condition: 'Players alternate per frame', gap: 'Demo mode — turn order relaxed' },
+        { name: 'Lane capacity', enforced: true, condition: 'One game per lane' },
+        { name: 'Game completion detection', enforced: true, condition: 'Checks all players finish 10 frames' },
         { name: 'Player registration rollback', enforced: false, condition: 'Remove players if booking fails', gap: 'Players persist even if lane assignment fails' },
-        { name: 'Lane Switching', enforced: true, condition: 'Move active game to new lane', source: 'front-desk/adapters/service.ts:40' }
+        { name: 'Lane Switching', enforced: true, condition: 'Move active game to new lane' }
       ]);
     });
 
@@ -121,7 +192,7 @@ export class FrontDeskHttpAdapter {
             'Game auto-completes when all players finish 10 frames'
           ],
           businessRules: [
-            'Player identity scheme (timestamp-based)',
+            'Player identity scheme (UUID-based)',
             'Shoe size as required field, hardcoded by orchestrator',
             'Lane assignment strategy (first-available sequential)',
             'Result<T,E> monad error model (no exceptions)',

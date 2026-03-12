@@ -314,7 +314,7 @@
         <div class="attribution">
             Proposed by <a href="https://www.linkedin.com/in/alistair-cockburn/" target="_blank">Alistair Cockburn</a> & 
             <a href="https://www.linkedin.com/in/jbrains/" target="_blank">JB Rainsberger</a><br>
-            Built by <a href="https://www.linkedin.com/in/djordjenikolic/" target="_blank">Djordje Nikolic</a> + AI Hive Mind
+            Built by <a href="https://www.linkedin.com/in/djordje-babic/" target="_blank">Djordje Babic</a> + AI Hive Mind
         </div>
     </header>
 
@@ -615,10 +615,10 @@ ${uc.businessRules ? `Business Rules Designed by AI:\n${uc.businessRules.map(r =
                 `;
             }
 
-            const pName = ps.playerId.split('-')[0];
+            const pName = escapeHtml(ps.playerId.split('-')[0]);
             row.innerHTML = `
                 <div style="font-family: 'JetBrains Mono'; font-size: 0.7rem; color: ${idx === currentPlayerIndex ? 'var(--primary)' : 'var(--muted)'}; margin-bottom: 4px;">
-                    ${idx === currentPlayerIndex ? '▶ ' : '&nbsp; '}${pName.toUpperCase()}
+                    ${idx === currentPlayerIndex ? '&#9654; ' : '&nbsp; '}${pName.toUpperCase()}
                 </div>
                 <table class="scoreboard">
                     <tr>${[1,2,3,4,5,6,7,8,9,10].map(n => `<th>${n}</th>`).join('')}</tr>
@@ -658,7 +658,12 @@ ${uc.businessRules ? `Business Rules Designed by AI:\n${uc.businessRules.map(r =
             // Log entry
             const log = document.getElementById(`trace-${event.hexagon}`);
             const line = document.createElement('div');
-            line.innerHTML = `<span style="color: var(--accent)">[${event.layer.toUpperCase()}]</span> ${event.action}`;
+            const label = document.createElement('span');
+            label.style.color = 'var(--accent)';
+            label.textContent = `[${event.layer.toUpperCase()}] `;
+            const action = document.createTextNode(event.action);
+            line.appendChild(label);
+            line.appendChild(action);
             log.appendChild(line);
             log.scrollTop = log.scrollHeight;
 
@@ -680,10 +685,16 @@ ${uc.businessRules ? `Business Rules Designed by AI:\n${uc.businessRules.map(r =
         next();
     }
 
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
     function updateHexagonStates() {
-        document.getElementById('state-player-registry').innerHTML = `Registered: ${currentGame.playerIds.length} players`;
-        document.getElementById('state-lane-manager').innerHTML = `Current Lane: ${currentGame.laneId}<br>Status: IN-USE`;
-        document.getElementById('state-scoring-engine').innerHTML = `Game ID: ${currentGame.id.split('-')[1]}<br>Logic: VERIFIED`;
+        document.getElementById('state-player-registry').textContent = `Registered: ${currentGame.playerIds.length} players`;
+        document.getElementById('state-lane-manager').innerHTML = `Current Lane: ${escapeHtml(currentGame.laneId)}<br>Status: IN-USE`;
+        document.getElementById('state-scoring-engine').innerHTML = `Game ID: ${escapeHtml(currentGame.id)}<br>Logic: VERIFIED`;
         document.getElementById('state-front-desk').innerHTML = `Orchestrator: ACTIVE<br>Bridge: CONNECTED`;
     }
 </script>
