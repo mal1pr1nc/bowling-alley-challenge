@@ -10,6 +10,18 @@ export class FrontDeskHttpAdapter {
   }
 
   private setupRoutes() {
+    // Root / (Welcome/Status)
+    this.app.get('/', (req: Request, res: Response) => {
+      res.json({ 
+        message: 'Bowling Alley Hexagonal API is running',
+        endpoints: [
+          'POST /games',
+          'POST /games/:id/rolls',
+          'GET /games/:id/scoreboard'
+        ]
+      });
+    });
+
     // POST /games (book a game)
     this.app.post('/games', async (req: Request, res: Response) => {
       const { playerNames } = req.body;
