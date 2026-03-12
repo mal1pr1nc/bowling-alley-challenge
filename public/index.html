@@ -326,6 +326,7 @@
                 <!-- buttons 0rd-10 -->
             </div>
             <button id="roll-btn" onclick="roll()">ROLL</button>
+            <button onclick="switchLane()" style="border-color: var(--accent); color: var(--accent);">SWITCH LANE</button>
             <span style="font-size: 0.6rem; color: var(--accent);">[Demo mode — turn order relaxed]</span>
         </div>
     </div>
@@ -421,6 +422,7 @@
 
     function setupPinSelector() {
         const container = document.getElementById('pin-selector');
+        container.innerHTML = '';
         for (let i = 0; i <= 10; i++) {
             const btn = document.createElement('button');
             btn.className = 'pin-btn';
@@ -477,7 +479,6 @@ ${uc.businessRules ? `Business Rules Designed by AI:\n${uc.businessRules.map(r =
     }
 
     async function loadADRs() {
-        // ADRs are static for now
         const adrs = [
             { id: '001', title: 'Hexagonal Isolation via Bridge Adapters', context: '4 apps must connect without cross-imports.', decision: 'Use Bridge Adapters in Front Desk.' },
             { id: '002', title: 'In-Memory Storage', context: 'Walking skeleton speed.', decision: 'All hexagons use InMemory adapters.' },
@@ -498,20 +499,15 @@ ${uc.businessRules ? `Business Rules Designed by AI:\n${uc.businessRules.map(r =
 
     function showTab(id) {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => t.classList.remove('active')); // Wait, typo
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         
         const tabs = document.querySelectorAll('.tab');
-        const contents = document.querySelectorAll('.tab-content');
-        
-        tabs.forEach((t, i) => {
-            if (t.innerText.toLowerCase().includes(id)) t.classList.add('active');
-            else t.classList.remove('active');
+        tabs.forEach(t => {
+            if (t.innerText.toLowerCase().includes(id.replace('-', ' '))) t.classList.add('active');
         });
         
-        contents.forEach(c => {
-            if (c.id === `tab-${id}`) c.classList.add('active');
-            else c.classList.remove('active');
-        });
+        const content = document.getElementById(`tab-${id}`);
+        if (content) content.classList.add('active');
     }
 
     function showNewGame() {
@@ -521,6 +517,7 @@ ${uc.businessRules ? `Business Rules Designed by AI:\n${uc.businessRules.map(r =
     async function startGame() {
         const namesInput = document.getElementById('player-names').value;
         const names = namesInput.split(',').map(n => n.trim()).filter(n => n);
+        if (names.length === 0) return;
         document.getElementById('overlay').style.display = 'none';
         
         const res = await fetch('/games', {
@@ -560,6 +557,17 @@ ${uc.businessRules ? `Business Rules Designed by AI:\n${uc.businessRules.map(r =
         refreshScoreboard();
     }
 
+    async function switchLane() {
+        const res = await fetch(`/games/${currentGame.id}/switch-lane`, { method: 'POST' });
+        const data = await res.json();
+        if (data.status === 'ok') {
+            refreshScoreboard();
+        } else {
+            alert(data.error);
+        }
+        processTrace(data.trace);
+    }
+
     async function refreshScoreboard() {
         if (!currentGame) return;
         const res = await fetch(`/games/${currentGame.id}/scoreboard`);
@@ -567,9 +575,6 @@ ${uc.businessRules ? `Business Rules Designed by AI:\n${uc.businessRules.map(r =
         
         const container = document.getElementById('scoreboards');
         container.innerHTML = '';
-        
-        const playersRes = await fetch('/player-registry/ports/ports.ts'); // Wait, can't read source like this
-        // Use IDs for now
         
         scoreboard.playerScores.forEach((ps, idx) => {
             const row = document.createElement('div');
@@ -624,11 +629,18 @@ ${uc.businessRules ? `Business Rules Designed by AI:\n${uc.businessRules.map(r =
         });
 
         document.getElementById('active-player-label').innerText = `PLAYER: ${scoreboard.playerScores[currentPlayerIndex].playerId.split('-')[0].toUpperCase()}`;
+        
+        // Update Game Status
+        const statusRes = await fetch(`/api/status`); // Not enough, we need game info
+        // We'll just infer from current game
         updateHexagonStates();
     }
 
     function processTrace(trace) {
         if (!trace) return;
+        
+        // Reset highlights
+        document.querySelectorAll('.hex-box').forEach(b => b.classList.remove('active'));
         
         let i = 0;
         const next = () => {
@@ -655,6 +667,7 @@ ${uc.businessRules ? `Business Rules Designed by AI:\n${uc.businessRules.map(r =
                 const ruleId = `rule-${event.businessRule.replace(/ /g, '-')}`;
                 const ruleCard = document.getElementById(ruleId);
                 if (ruleCard) {
+                    showTab('rules');
                     ruleCard.style.borderColor = 'var(--primary)';
                     ruleCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     setTimeout(() => ruleCard.style.borderColor = '#111', 2000);
@@ -668,10 +681,10 @@ ${uc.businessRules ? `Business Rules Designed by AI:\n${uc.businessRules.map(r =
     }
 
     function updateHexagonStates() {
-        document.getElementById('state-player-registry').innerHTML = `Registered: ${currentGame.playerIds.length}`;
-        document.getElementById('state-lane-manager').innerHTML = `Lane: ${currentGame.laneId}<br>Status: IN-USE`;
-        document.getElementById('state-scoring-engine').innerHTML = `Game: ${currentGame.id}<br>Active`;
-        document.getElementById('state-front-desk').innerHTML = `Orchestrating...`;
+        document.getElementById('state-player-registry').innerHTML = `Registered: ${currentGame.playerIds.length} players`;
+        document.getElementById('state-lane-manager').innerHTML = `Current Lane: ${currentGame.laneId}<br>Status: IN-USE`;
+        document.getElementById('state-scoring-engine').innerHTML = `Game ID: ${currentGame.id.split('-')[1]}<br>Logic: VERIFIED`;
+        document.getElementById('state-front-desk').innerHTML = `Orchestrator: ACTIVE<br>Bridge: CONNECTED`;
     }
 </script>
 

@@ -8,7 +8,6 @@ export class FrontDeskHttpAdapter {
 
   constructor(private service: FrontDeskDrivingPort, private tracer: Tracer) {
     this.app.use(express.json());
-    // Serve static files from public directory
     this.app.use(express.static(path.join(__dirname, '../../public')));
     this.setupRoutes();
   }
@@ -21,7 +20,8 @@ export class FrontDeskHttpAdapter {
         endpoints: [
           'POST /games',
           'POST /games/:id/rolls',
-          'GET /games/:id/scoreboard'
+          'GET /games/:id/scoreboard',
+          'POST /games/:id/switch-lane'
         ]
       });
     });
@@ -62,6 +62,19 @@ export class FrontDeskHttpAdapter {
       }
     });
 
+    // POST /games/:id/switch-lane (UC4)
+    this.app.post('/games/:id/switch-lane', async (req: Request, res: Response) => {
+      const gameId = req.params.id as string;
+      const result = await this.service.switchLane(gameId);
+      const trace = this.tracer.flush();
+
+      if (result.success) {
+        res.status(200).json({ status: 'ok', trace });
+      } else {
+        res.status(500).json({ error: result.error.message, trace });
+      }
+    });
+
     // GET /games/:id/scoreboard
     this.app.get('/games/:id/scoreboard', async (req: Request, res: Response) => {
       const gameId = req.params.id as string;
@@ -84,7 +97,8 @@ export class FrontDeskHttpAdapter {
         { name: 'Turn order', enforced: false, condition: 'Players alternate per frame', status: 'Demo mode — turn order relaxed', gap: 'AI-designed system allows any player at any time' },
         { name: 'Lane capacity', enforced: true, condition: 'One game per lane', source: 'lane-manager/adapters/service.ts:10' },
         { name: 'Game completion detection', enforced: true, condition: 'Checks all players finish 10 frames', source: 'scoring-engine/adapters/service.ts:50' },
-        { name: 'Player registration rollback', enforced: false, condition: 'Remove players if booking fails', gap: 'Players persist even if lane assignment fails' }
+        { name: 'Player registration rollback', enforced: false, condition: 'Remove players if booking fails', gap: 'Players persist even if lane assignment fails' },
+        { name: 'Lane Switching', enforced: true, condition: 'Move active game to new lane', source: 'front-desk/adapters/service.ts:40' }
       ]);
     });
 
@@ -132,6 +146,25 @@ export class FrontDeskHttpAdapter {
             'Front Desk calls Scoring Engine to initialize game',
             'Scoring Engine creates game state with player IDs and lane',
             'Front Desk returns game confirmation (game ID, lane, player IDs)'
+          ]
+        },
+        {
+          id: 'UC4',
+          level: 'USER GOAL LEVEL',
+          name: 'SWITCH LANE',
+          actor: 'Attendant / Manager',
+          goal: 'Move active game to a different lane (mechanical failure)',
+          scope: 'Front Desk → Lane Manager + Scoring Engine',
+          preconditions: ['Game exists, another lane is available'],
+          success: 'Game moved, old lane released, scores preserved',
+          scenario: [
+            'Manager requests lane switch for active game',
+            'Front Desk gets current game to find old lane ID',
+            'Front Desk asks Lane Manager for a new available lane',
+            'Lane Manager assigns new lane',
+            'Front Desk tells Scoring Engine to update game\'s lane ID',
+            'Front Desk tells Lane Manager to release old lane',
+            'Game continues on new lane with all scores intact'
           ]
         }
       ]);
