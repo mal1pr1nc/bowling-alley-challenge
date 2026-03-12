@@ -24,3 +24,12 @@ export interface Game {
   playerIds: PlayerId[];
   isComplete: boolean;
 }
+
+export interface Scoreboard {
+  gameId: GameId;
+  playerScores: {
+    playerId: string;
+    totalScore: number;
+    frames: { rolls: number[]; score: number }[];
+  }[];
+}

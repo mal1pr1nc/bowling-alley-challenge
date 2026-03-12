@@ -1,5 +1,4 @@
-import { PlayerId, LaneId, GameId, Game, Result } from '../../shared/types';
-import { Scoreboard } from '../../scoring-engine/ports/ports';
+import { PlayerId, LaneId, GameId, Game, Result, Scoreboard } from '../../shared/types';
 
 export interface FrontDeskDrivingPort {
   bookGame(playerNames: string[]): Promise<Result<Game>>;

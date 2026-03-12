@@ -16,7 +16,7 @@ export class InMemoryLaneStorage implements LaneStorageDrivenPort {
     return Array.from(this.lanes.values()).find(l => l.status === 'available') || null;
   }
 
-  async findAll(): Promise<Lane[] | any> {
+  async findAll(): Promise<Lane[]> {
     return Array.from(this.lanes.values());
   }
 }

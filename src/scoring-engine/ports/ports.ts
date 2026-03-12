@@ -1,13 +1,4 @@
-import { Game, GameId, PlayerId, Result } from '../../shared/types';
-
-export interface Scoreboard {
-  gameId: GameId;
-  playerScores: {
-    playerId: string;
-    totalScore: number;
-    frames: { rolls: number[]; score: number }[];
-  }[];
-}
+import { Game, GameId, PlayerId, Result, Scoreboard } from '../../shared/types';
 
 export interface ScoringEngineDrivingPort {
   startGame(laneId: string, playerIds: PlayerId[]): Promise<Result<Game>>;

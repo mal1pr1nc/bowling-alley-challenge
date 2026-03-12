@@ -1,5 +1,5 @@
-import { Game, GameId, PlayerId, Result, success, failure } from '../../shared/types';
-import { ScoringEngineDrivingPort, GameStorageDrivenPort, Scoreboard } from '../ports/ports';
+import { Game, GameId, PlayerId, Result, success, failure, Scoreboard } from '../../shared/types';
+import { ScoringEngineDrivingPort, GameStorageDrivenPort } from '../ports/ports';
 import { calculateFrames } from '../domain/scoring';
 
 export class ScoringEngineService implements ScoringEngineDrivingPort {

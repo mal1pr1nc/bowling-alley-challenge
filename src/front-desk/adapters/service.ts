@@ -1,5 +1,4 @@
-import { Game, GameId, PlayerId, LaneId, Result, success, failure } from '../../shared/types';
-import { Scoreboard } from '../../scoring-engine/ports/ports';
+import { Game, GameId, PlayerId, LaneId, Result, success, failure, Scoreboard } from '../../shared/types';
 import { FrontDeskDrivingPort, PlayerRegistryPort, LaneManagerPort, ScoringEnginePort } from '../ports/ports';
 
 export class FrontDeskService implements FrontDeskDrivingPort {
@@ -11,7 +10,9 @@ export class FrontDeskService implements FrontDeskDrivingPort {
 
   async bookGame(playerNames: string[]): Promise<Result<Game>> {
     const playerResults = await Promise.all(playerNames.map(name => this.players.registerPlayer(name, 10)));
-    const registeredPlayers = playerResults.filter(r => r.success).map(r => (r as any).value);
+    const registeredPlayers = playerResults
+      .filter((r): r is { success: true; value: { id: string; name: string; shoeSize: number } } => r.success)
+      .map(r => r.value);
     
     if (registeredPlayers.length !== playerNames.length) {
       return failure(new Error('Failed to register some players'));

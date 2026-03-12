@@ -17,6 +17,7 @@ Built using Dr. Alistair Cockburn's Hexagonal Architecture (Ports & Adapters).
 4. **Front Desk**: Orchestrates the game flow.
 
 ## Public API
+- **Endpoint**: [https://bowling-challenge.hivemind.rs/](https://bowling-challenge.hivemind.rs/)
 - `POST /games`: Book a new game.
 - `POST /games/:id/rolls`: Record a roll.
 - `GET /games/:id/scoreboard`: View the current score.
